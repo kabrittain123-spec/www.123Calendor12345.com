@@ -877,26 +877,45 @@
         rotateTheme();
         setInterval(rotateTheme, 2 * 60 * 1000);
 
+        // FORCED INDIANA TIMEZONE CLOCK LOGIC
         function updateDateTime() {
             const now = new Date();
-            let hours = now.getHours();
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const seconds = String(now.getSeconds()).padStart(2, '0');
 
-            const ampm = hours >= 12 ? 'PM' : 'AM';
-            let hours12 = hours % 12;
-            hours12 = hours12 ? hours12 : 12;
+            const timeOptions = {
+                timeZone: 'America/Indiana/Indianapolis',
+                hour: 'numeric',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            };
 
-            document.getElementById('time-display').textContent = `${hours12}:${minutes}`;
-            document.getElementById('ampm-display').textContent = ampm;
-            document.getElementById('sec-display').textContent = seconds;
+            const indianaTimeString = now.toLocaleTimeString('en-US', timeOptions);
+            const timeParts = indianaTimeString.match(/(\d+:\d+):(\d+)\s*(AM|PM)/i);
 
-            const options = { weekday: 'long', month: 'long', day: 'numeric' };
-            document.getElementById('date-display').textContent = now.toLocaleDateString('en-US', options);
+            if (timeParts) {
+                document.getElementById('time-display').textContent = timeParts[1];
+                document.getElementById('sec-display').textContent = timeParts[2];
+                document.getElementById('ampm-display').textContent = timeParts[3];
+            }
+
+            const dateOptions = {
+                timeZone: 'America/Indiana/Indianapolis',
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric'
+            };
+            document.getElementById('date-display').textContent = now.toLocaleDateString('en-US', dateOptions);
+
+            const hourFormatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'America/Indiana/Indianapolis',
+                hour: 'numeric',
+                hour12: false
+            });
+            const indianaHour = parseInt(hourFormatter.format(now), 10);
 
             let greeting = "Good Evening";
-            if (hours >= 5 && hours < 12) greeting = "Good Morning";
-            else if (hours >= 12 && hours < 18) greeting = "Good Afternoon";
+            if (indianaHour >= 5 && indianaHour < 12) greeting = "Good Morning";
+            else if (indianaHour >= 12 && indianaHour < 18) greeting = "Good Afternoon";
             document.getElementById('greeting-display').textContent = greeting;
 
             updateCountdownsHomeDisplay();
@@ -926,11 +945,12 @@
         setInterval(rotateNews, 8000);
 
         function getTodayKey() {
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const day = String(today.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
+            const options = { timeZone: 'America/Indiana/Indianapolis', year: 'numeric', month: '2-digit', day: '2-digit' };
+            const parts = new Intl.DateTimeFormat('en-US', options).formatToParts(new Date());
+            const y = parts.find(p => p.type === 'year').value;
+            const m = parts.find(p => p.type === 'month').value;
+            const d = parts.find(p => p.type === 'day').value;
+            return `${y}-${m}-${d}`;
         }
 
         /* AUTO ON/OFF SCHEDULE LOGIC */
@@ -957,7 +977,10 @@
             if (!config.enabled) return false;
 
             const now = new Date();
-            const currentMins = now.getHours() * 60 + now.getMinutes();
+            const hourFormatter = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Indiana/Indianapolis', hour: 'numeric', hour12: false });
+            const minFormatter = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Indiana/Indianapolis', minute: 'numeric' });
+            
+            const currentMins = parseInt(hourFormatter.format(now), 10) * 60 + parseInt(minFormatter.format(now), 10);
 
             const [offH, offM] = config.offTime.split(':').map(Number);
             const [onH, onM] = config.onTime.split(':').map(Number);
@@ -1384,9 +1407,9 @@
             pushDataToFirebase();
         }
 
-        /* 5-DAY WEATHER FORECAST API */
-        const LATITUDE = 40.7128;
-        const LONGITUDE = -74.0060;
+        /* 5-DAY WEATHER FORECAST API (MADISON, IN COORDINATES) */
+        const LATITUDE = 38.7359;
+        const LONGITUDE = -85.3794;
 
         async function fetch5DayWeather() {
             try {
